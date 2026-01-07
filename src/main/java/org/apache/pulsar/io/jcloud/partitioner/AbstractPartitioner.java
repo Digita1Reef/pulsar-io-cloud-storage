@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pulsar.client.api.Message;
-import org.apache.pulsar.client.api.MessageIdAdv;
 import org.apache.pulsar.common.naming.TopicName;
 import org.apache.pulsar.functions.api.Record;
 import org.apache.pulsar.io.jcloud.BlobStoreAbstractConfig;
@@ -43,6 +42,7 @@ public abstract class AbstractPartitioner<T> implements Partitioner<T> {
     private boolean withTopicPartitionNumber;
     private boolean partitionerWithTopicName;
     private boolean useIndexAsOffset;
+    private String dynamicPartitionTemplate;
 
     @Override
     public void configure(BlobStoreAbstractConfig config) {
@@ -96,11 +96,20 @@ public abstract class AbstractPartitioner<T> implements Partitioner<T> {
             }
         }
         return record.getMessage()
-                .map(msg -> (MessageIdAdv) msg.getMessageId())
-                .map(msgId -> String.format("%s.%s.%s",
-                        msgId.getLedgerId(), msgId.getEntryId(), msgId.getBatchIndex()))
+                .map(Message::getMessageId)
+                .map(mid -> sanitizeFileComponent(mid.toString()))
                 .orElseThrow(() -> new RuntimeException("found empty message"));
 
+    }
+
+    private static String sanitizeFileComponent(String s) {
+        if (s == null) {
+            return "null";
+        }
+        // Keep it conservative: replace path separators and whitespace
+        return s.replace('/', '_')
+                .replace('\\', '_')
+                .replace(' ', '_');
     }
 
 }

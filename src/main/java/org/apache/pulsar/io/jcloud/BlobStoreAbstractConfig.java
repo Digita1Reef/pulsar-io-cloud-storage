@@ -92,6 +92,10 @@ public class BlobStoreAbstractConfig implements Serializable {
     private String timePartitionDuration;
     private boolean sliceTopicPartitionPath;
 
+    private String dynamicPartitionTemplate;
+    private String dynamicTimeZone = "UTC";
+    private boolean dynamicFailOnMissing = true;
+
     // #### format configuration ####
     private String formatType;
     // The AVRO codec: none, deflate, bzip2, xz, zstandard, snappy

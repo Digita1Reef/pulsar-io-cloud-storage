@@ -123,9 +123,9 @@ public abstract class BlobStoreAbstractSink<V extends BlobStoreAbstractConfig> i
             String topicName = entry.getKey();
             Map<String, List<Record<GenericRecord>>> schemaVersionMap = entry.getValue().stream()
                     .collect(Collectors.groupingBy(r -> {
-                            byte[] schemaVersionBytes = r.getValue().getSchemaVersion();
-                            return schemaVersionBytes != null ? Arrays.toString(schemaVersionBytes) : "null";
-                        }
+                                byte[] schemaVersionBytes = r.getValue().getSchemaVersion();
+                                return schemaVersionBytes != null ? Arrays.toString(schemaVersionBytes) : "null";
+                            }
                     ));
             for (List<Record<GenericRecord>> singleTopicRecordsToInsert : schemaVersionMap.values()) {
                 Record<GenericRecord> firstRecord = singleTopicRecordsToInsert.get(0);
@@ -206,8 +206,32 @@ public abstract class BlobStoreAbstractSink<V extends BlobStoreAbstractConfig> i
 
         String encodePartition = partitioner.encodePartition(message, partitioningTimestamp);
         String partitionedPath = partitioner.generatePartitionedPath(message.getTopicName().get(), encodePartition);
-        String path = sinkConfig.getPathPrefix() + partitionedPath + format.getExtension();
-        log.info("generate message[messageId={}] savePath: {}", message.getMessage().get().getMessageId(), path);
+
+        // Ensure partition path ends with exactly one slash.
+        String normalizedPartitionedPath = partitionedPath;
+        if (!normalizedPartitionedPath.endsWith("/")) {
+            normalizedPartitionedPath = normalizedPartitionedPath + "/";
+        }
+
+        String fileName = buildDefaultFileName(message, partitioningTimestamp);
+        String path = sinkConfig.getPathPrefix() + normalizedPartitionedPath + fileName + format.getExtension();
+
+        log.info("generate message[messageId={}] savePath: {}",
+                message.getMessage().get().getMessageId(), path);
         return path;
+    }
+
+    private String buildDefaultFileName(Record<GenericRecord> message, long partitioningTimestamp) {
+        String topic = "unknown-topic";
+        if (message.getTopicName().isPresent()) {
+            topic = message.getTopicName().get().replace("/", "_");
+        }
+
+        String ts = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss")
+                .withZone(java.time.ZoneOffset.UTC)
+                .format(java.time.Instant.ofEpochMilli(partitioningTimestamp));
+
+        String uuid = java.util.UUID.randomUUID().toString();
+        return topic + "-" + ts + "-" + uuid;
     }
 }

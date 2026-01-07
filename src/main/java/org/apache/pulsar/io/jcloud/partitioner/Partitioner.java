@@ -40,6 +40,9 @@ public interface Partitioner<T> {
         PartitionerType partitionerType =
                 EnumUtils.getEnumIgnoreCase(PartitionerType.class, partitionerTypeName, PartitionerType.PARTITION);
         switch (partitionerType) {
+            case DYNAMIC:
+                partitioner = new DynamicPartitioner<>();
+                break;
             case TIME:
                 partitioner = new TimePartitioner<>();
                 break;
